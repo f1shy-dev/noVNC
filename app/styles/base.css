@@ -19,10 +19,25 @@
  * 10000: Max (used for polyfills)
  */
 
+/*
+ * State variables (set on :root):
+ *
+ * noVNC_touch: Device has touch input
+ *
+ * noVNC_loading: Page is still loading
+ * noVNC_connecting: Connecting to server
+ * noVNC_reconnecting: Re-establishing a connection
+ * noVNC_connected: Connected to server (most common state)
+ * noVNC_disconnecting: Disconnecting from server
+ */
+
+:root {
+  font-family: sans-serif;
+}
+
 body {
   margin:0;
   padding:0;
-  font-family: Helvetica;
   /*Background image with light grey curve.*/
   background-color:#494949;
   background-repeat:no-repeat;
@@ -463,8 +478,8 @@ select:active {
   position: fixed;
   left: calc(100vw - 50px);
   right: auto;
-  top: 50%;
-  transform: translateY(-50%) scale(0);
+  top: calc(50vh - 25%);
+  transform: scale(0);
   width: 100px;
   height: 50%;
   max-height: 600px;
@@ -485,7 +500,7 @@ select:active {
   visibility: visible;
   opacity: 1;
   transition-delay: 0.2s;
-  transform: translateY(-50%) scale(1);
+  transform: scale(1);
 }
 
 /* General button style */
@@ -842,6 +857,23 @@ select:active {
 }
 
 /* ----------------------------------------
+ * Server verification Dialog
+ * ----------------------------------------
+ */
+
+#noVNC_verify_server_dlg {
+  position: relative;
+
+  transform: translateY(-50px);
+}
+#noVNC_verify_server_dlg.noVNC_open {
+  transform: translateY(0);
+}
+#noVNC_fingerprint_block {
+  margin: 10px;
+}
+
+/* ----------------------------------------
  * Password Dialog
  * ----------------------------------------
  */
@@ -854,12 +886,8 @@ select:active {
 #noVNC_credentials_dlg.noVNC_open {
   transform: translateY(0);
 }
-#noVNC_credentials_dlg ul {
-  list-style: none;
-  margin: 0px;
-  padding: 0px;
-}
-.noVNC_hidden {
+#noVNC_username_block.noVNC_hidden,
+#noVNC_password_block.noVNC_hidden {
   display: none;
 }
 
@@ -871,7 +899,11 @@ select:active {
 
 /* Transition screen */
 #noVNC_transition {
-  display: none;
+  transition: 0.5s ease-in-out;
+
+  display: flex;
+  opacity: 0;
+  visibility: hidden;
 
   position: fixed;
   top: 0;
@@ -892,7 +924,8 @@ select:active {
 :root.noVNC_connecting #noVNC_transition,
 :root.noVNC_disconnecting #noVNC_transition,
 :root.noVNC_reconnecting #noVNC_transition {
-  display: flex;
+  opacity: 1;
+  visibility: visible;
 }
 :root:not(.noVNC_reconnecting) #noVNC_cancel_reconnect_button {
   display: none;

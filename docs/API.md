@@ -86,8 +86,12 @@ protocol stream.
   - The `connect` event is fired when the `RFB` object has completed
     the connection and handshaking with the server.
 
-[`disconnect`](#disconnected)
+[`disconnect`](#disconnect)
   - The `disconnect` event is fired when the `RFB` object disconnects.
+
+[`serververification`](#serververification)
+  - The `serververification` event is fired when the server identity
+    must be confirmed by the user.
 
 [`credentialsrequired`](#credentialsrequired)
   - The `credentialsrequired` event is fired when more credentials must
@@ -122,11 +126,16 @@ protocol stream.
 [`RFB.disconnect()`](#rfbdisconnect)
   - Disconnect from the server.
 
+[`RFB.approveServer()`](#rfbapproveserver)
+  - Proceed connecting to the server. Should be called after the
+    [`serververification`](#serververification) event has fired and the
+    user has verified the identity of the server.
+
 [`RFB.sendCredentials()`](#rfbsendcredentials)
   - Send credentials to server. Should be called after the
     [`credentialsrequired`](#credentialsrequired) event has fired.
 
-[`RFB.sendKey()`](#rfbsendKey)
+[`RFB.sendKey()`](#rfbsendkey)
   - Send a key event.
 
 [`RFB.sendCtrlAltDel()`](#rfbsendctrlaltdel)
@@ -147,11 +156,20 @@ protocol stream.
 [`RFB.machineReset()`](#rfbmachinereset)
   - Request a reset of the remote machine.
 
-[`RFB.clipboardPasteFrom()`](#rfbclipboardPasteFrom)
+[`RFB.clipboardPasteFrom()`](#rfbclipboardpastefrom)
   - Send clipboard contents to server.
 
 [`RFB.requestInputLock()`](#rfbrequestInputLock)
   - Requests that the RFB canvas acquire an input lock.
+  
+[`RFB.getImageData()`](#rfbgetimagedata)
+  - Return the current content of the screen as an ImageData array.
+
+[`RFB.toDataURL()`](#rfbtodataurl)
+  - Return the current content of the screen as data-url encoded image file.
+
+[`RFB.toBlob()`](#rfbtoblob)
+  - Return the current content of the screen as Blob encoded image file.
 
 ### Details
 
@@ -172,9 +190,9 @@ connection to a specified VNC server.
     existing contents of the `HTMLElement` will be untouched, but new
     elements will be added during the lifetime of the `RFB` object.
 
-**`url`**
+**`urlOrDataChannel`**
   - A `DOMString` specifying the VNC server to connect to. This must be
-    a valid WebSocket URL.
+    a valid WebSocket URL. This can also be a `WebSocket` or `RTCDataChannel`.
 
 **`options`** *Optional*
   - An `Object` specifying extra details about how the connection
@@ -218,6 +236,20 @@ terminated. The `detail` property is an `Object` that contains the
 property `clean`. `clean` is a `boolean` indicating if the termination
 was clean or not. In the event of an unexpected termination or an error
 `clean` will be set to false.
+
+#### serververification
+
+The `serververification` event is fired when the server provides
+information that allows the user to verify that it is the correct server
+and protect against a man-in-the-middle attack. The `detail` property is
+an `Object` containing the property `type` which is a `DOMString`
+specifying which type of information the server has provided. Other
+properties are also available, depending on the value of `type`:
+
+`"RSA"`
+ - The server identity is verified using just a RSA key. The property
+   `publickey` is a `Uint8Array` containing the public key in a unsigned
+   big endian representation.
 
 #### credentialsrequired
 
@@ -287,6 +319,16 @@ connected server.
 
     RFB.disconnect( );
 
+#### RFB.approveServer()
+
+The `RFB.approveServer()` method is used to signal that the user has
+verified the server identity provided in a `serververification` event
+and that the connection can continue.
+
+##### Syntax
+
+    RFB.approveServer( );
+
 #### RFB.sendCredentials()
 
 The `RFB.sendCredentials()` method is used to provide the missing
@@ -344,7 +386,14 @@ Keyboard events will be sent to the remote server after this point.
 
 ##### Syntax
 
-    RFB.focus( );
+    RFB.focus( [options] );
+
+###### Parameters
+
+**`options`** *Optional*
+  - A `object` providing options to control how the focus will be
+    performed. Please see [`HTMLElement.focus()`](https://developer.mozilla.org/en-US/docs/Web/API/HTMLElement/focus)
+    for available options.
 
 #### RFB.blur()
 
@@ -420,3 +469,55 @@ acquisition of the requested locks.
     directly interacted with an element through an [engagement
     gesture](https://w3c.github.io/pointerlock/#dfn-engagement-gesture) (e.g. a
     click or touch event) for the browser to allow this.
+=======
+#### RFB.getImageData()
+
+The `RFB.getImageData()` method is used to return the current content of the
+screen encoded as [`ImageData`](https://developer.mozilla.org/en-US/docs/Web/API/ImageData).
+
+##### Syntax
+
+  RFB.getImageData();
+
+#### RFB.toDataURL()
+
+The `RFB.toDataURL()` method is used to return the current content of the
+screen encoded as a data URL that could for example be put in the `src` attribute
+of an `img` tag.
+
+##### Syntax
+
+  RFB.toDataURL();
+  RFB.toDataURL(type);
+  RFB.toDataURL(type, encoderOptions);
+
+###### Parameters
+
+**`type`** *Optional*
+  - A string indicating the requested MIME type of the image
+
+**`encoderOptions`** *Optional*
+  - A number between 0 and 1 indicating the image quality.
+
+#### RFB.toBlob()
+
+The `RFB.toBlob()` method is used to return the current content of the
+screen encoded as [`Blob`](https://developer.mozilla.org/en-US/docs/Web/API/Blob).
+
+##### Syntax
+
+  RFB.toDataURL(callback);
+  RFB.toDataURL(callback, type);
+  RFB.toDataURL(callback, type, quality);
+
+###### Parameters
+
+**`callback`**
+  - A callback function which will receive the resulting [`Blob`](https://developer.mozilla.org/en-US/docs/Web/API/Blob)
+    as the single argument
+
+**`type`** *Optional*
+  - A string indicating the requested MIME type of the image
+
+**`encoderOptions`** *Optional*
+  - A number between 0 and 1 indicating the image quality.

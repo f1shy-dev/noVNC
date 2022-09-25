@@ -11,6 +11,11 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
+      - run: |
+          GITREV=$(git rev-parse --short HEAD)
+          echo $GITREV
+          sed -i "s/^\(.*\"version\".*\)\"\([^\"]\+\)\"\(.*\)\$/\1\"\2-g$GITREV\"\3/" package.json
+        if: github.event_name != 'release'
       - uses: actions/setup-node@v1
         with:
           # Needs to be explicitly specified for auth to work
@@ -23,19 +28,37 @@ jobs:
       - run: npm publish --access public
         env:
           NODE_AUTH_TOKEN: ${{secrets.NPM_TOKEN}}
-        if: ${{ github.event_name == 'release' && !github.event.release.prerelease }}
+        if: |
+          github.repository == 'novnc/noVNC' &&
+          github.event_name == 'release' &&
+          !github.event.release.prerelease
       - run: npm publish --access public --tag beta
         env:
           NODE_AUTH_TOKEN: ${{secrets.NPM_TOKEN}}
-        if: ${{ github.event_name == 'release' && github.event.release.prerelease }}
+        if: |
+          github.repository == 'novnc/noVNC' &&
+          github.event_name == 'release' &&
+          github.event.release.prerelease
+      - run: npm publish --access public --tag dev
+        env:
+          NODE_AUTH_TOKEN: ${{secrets.NPM_TOKEN}}
+        if: |
+          github.repository == 'novnc/noVNC' &&
+          github.event_name == 'push' &&
+          github.event.ref == 'refs/heads/master'
   snap:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
       - run: |
+          GITREV=$(git rev-parse --short HEAD)
+          echo $GITREV
+          sed -i "s/^\(.*\"version\".*\)\"\([^\"]\+\)\"\(.*\)\$/\1\"\2-g$GITREV\"\3/" package.json
+        if: github.event_name != 'release'
+      - run: |
           VERSION=$(grep '"version"' package.json | cut -d '"' -f 4)
           echo $VERSION
-          sed -i "s/@VERSION@/$VERSION/g" snap/snapcraft.yaml
+          sed -i "s/^version:.*/version: '$VERSION'/" snap/snapcraft.yaml
       - uses: snapcore/action-build@v1
         id: snapcraft
       - uses: actions/upload-artifact@v2
@@ -45,12 +68,27 @@ jobs:
       - uses: snapcore/action-publish@v1
         with:
           store_login: ${{ secrets.SNAPCRAFT_LOGIN }}
-          snap: ${{ steps.build.outputs.snap }}
+          snap: ${{ steps.snapcraft.outputs.snap }}
           release: stable
-        if: ${{ github.event_name == 'release' && !github.event.release.prerelease }}
+        if: |
+          github.repository == 'novnc/noVNC' &&
+          github.event_name == 'release' &&
+          !github.event.release.prerelease
       - uses: snapcore/action-publish@v1
         with:
           store_login: ${{ secrets.SNAPCRAFT_LOGIN }}
-          snap: ${{ steps.build.outputs.snap }}
+          snap: ${{ steps.snapcraft.outputs.snap }}
           release: beta
-        if: ${{ github.event_name == 'release' && github.event.release.prerelease }}
+        if: |
+          github.repository == 'novnc/noVNC' &&
+          github.event_name == 'release' &&
+          github.event.release.prerelease
+      - uses: snapcore/action-publish@v1
+        with:
+          store_login: ${{ secrets.SNAPCRAFT_LOGIN }}
+          snap: ${{ steps.snapcraft.outputs.snap }}
+          release: edge
+        if: |
+          github.repository == 'novnc/noVNC' &&
+          github.event_name == 'push' &&
+          github.event.ref == 'refs/heads/master'
